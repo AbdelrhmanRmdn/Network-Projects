@@ -75,4 +75,35 @@ Figuring out *why* my carefully-chosen IPs still couldn't ping each other took s
 
 This project took things from "two PCs talking" to an actual small multi-network topology — and for the first time, I really felt the difference between *addressing* (which subnet is this?) and *routing* (can traffic actually get there?). Day 3 is going to dig into what's actually happening inside those packets with Wireshark — can't wait. ⚡
 
+## 🗓️ Day 3 — OSI Model, For Real (Wireshark)
 
+**The Setup:**
+- Wireshark
+- A browser + neverssl.com (plain HTTP, no encryption, perfect for reading raw traffic)
+
+**Experience:**
+
+Today was my first time ever opening Wireshark, and not gonna lie, seeing hundreds of rows scroll by the second I started capturing was a little overwhelming at first. But once I picked my active network interface, started the capture, and visited `neverssl.com`, things got a lot more manageable — I filtered the traffic down using `http` in the display filter bar, and suddenly instead of chaos I had just a handful of relevant rows.
+
+I found a packet with `GET /online HTTP/1.1` in it and clicked into it. This is where it got really cool — instead of reading about the OSI model as a 7-layer diagram in a slide, I was staring at the actual layers stacked inside one real packet:
+
+- **Ethernet II** → Source MAC `38:54:9b:30:e5:44` (my laptop), Destination MAC `58:00:e3:f0:bf:2b` (my router — NOT the actual website, which threw me for a second until I understood why).
+- **Internet Protocol** → Source `192.168.1.5` (my private IP), Destination `34.223.124.45` (neverssl.com's real public server IP).
+- **TCP** → Source port `51811` (random, picked by my OS for this connection), Destination port `80` (standard HTTP), Flags `PSH, ACK` (mid-conversation, pushing data + acknowledging).
+- **HTTP** → `GET /online HTTP/1.1` with `Host: neverssl.com` — the actual human-readable request.
+
+The biggest "aha" moment was realizing MAC addresses only ever describe the **next hop** on the local network, not the true final destination — my PC doesn't know or care about neverssl.com's MAC address, it just needs to hand the packet to my router, which figures out the rest. IP, on the other hand, is the layer that actually knows the real end-to-end destination across the internet.
+
+**What I Learned:**
+1. How to actually use Wireshark — pick an interface, capture, filter, and read a packet layer by layer.
+2. The real difference between MAC addresses (physical, fixed, local-hop-only) and IP addresses (logical, assigned, true end-to-end addressing) — MAC won't change if I switch networks, but IP will, since it depends on whichever network I'm connected to.
+3. What TCP ports and flags actually represent in a live connection — a random source port per connection, a fixed destination port for the service, and flags describing the conversation's current state.
+4. The full 7-layer OSI model (Physical, Data Link, Network, Transport, Session, Presentation, Application) — but more importantly, that in real-world traffic you mostly see 4 concrete layers clearly (Ethernet, IP, TCP, and the application protocol like HTTP), while Physical/Session/Presentation stay mostly conceptual in day-to-day packet analysis.
+
+**Challenges:**
+
+Wireshark's sheer amount of live traffic was intimidating for about the first two minutes — my instinct was to panic a little at all the noise. Filtering by `http` fixed that immediately, and once I saw the packet broken into those 4-5 expandable layers, it stopped feeling like chaos and started feeling like a structure I could actually read.
+
+**Conclusion:**
+
+This was the day OSI stopped being a diagram I memorized for an exam and became something I could point at inside real traffic. Feels like a genuine shift from "studying networking" to "reading networking" — excited to bring routing into the picture next and finally get those 4 subnets from Day 2 talking to each other. ⚡
