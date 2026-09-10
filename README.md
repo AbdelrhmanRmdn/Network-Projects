@@ -107,3 +107,42 @@ Wireshark's sheer amount of live traffic was intimidating for about the first tw
 **Conclusion:**
 
 This was the day OSI stopped being a diagram I memorized for an exam and became something I could point at inside real traffic. Feels like a genuine shift from "studying networking" to "reading networking" — excited to bring routing into the picture next and finally get those 4 subnets from Day 2 talking to each other. ⚡
+
+## 🗓️ Day 4 — Static Routing (and a LOT of troubleshooting)
+
+**The Setup:**
+- 2 Routers (R1, R2)
+- 2 Switches
+- 4 PCs
+- 1 Serial link between the routers
+
+**Experience:**
+
+Today was supposed to be about learning `ip route`, but it turned into the most hands-on troubleshooting day so far — which honestly ended up being the real lesson.
+
+I started by extending my Day 2 topology with a second router, but hit a wall almost immediately: a module (`NM-1CFE`) on the router refused to accept a cable connection no matter what I tried. After going back and forth trying to diagnose it (wrong cable type, wrong module, router power state), I made the call to stop fighting the broken build and start fresh instead — 2 clean routers, no extra modules, connected directly via a serial link this time.
+
+Once rebuilt, I configured both routers' interfaces (`ip address` + `no shutdown` on each), then added static PCs on both sides — subnet `192.168.10.0/24` on R1's side, `192.168.20.0/24` on R2's side.
+
+First real test: pinging across from R1's subnet to R2's subnet **before** adding any routes. It failed with `Destination host unreachable` — and that specific error (not just a timeout) told me something important: R1 actually received the packet and tried to route it, but had no idea where `192.168.20.0/24` was, so it rejected it outright.
+
+Then I added the actual static routes:
+ip route 192.168.20.0 255.255.255.0 10.0.0.2 (on R1)
+ip route 192.168.10.0 255.255.255.0 10.0.0.1 (on R2)
+
+Ran the ping again — 3 out of 4 replies came back successfully (the first one timed out, which turned out to be normal ARP resolution delay on the very first packet, not an actual problem).
+
+**What I Learned:**
+1. A single router automatically routes between ALL of its own directly-connected subnets — no static routes needed for that case. Static routes are only required when a network sits *beyond* another router.
+2. The exact syntax and logic of `ip route [destination network] [mask] [next-hop]` — "to reach this network, send traffic to this next device."
+3. The real difference between `Destination host unreachable` (router actively rejected it — no matching route) vs a plain timeout (no response at all) — I'd only read about this distinction before, today I actually generated and diagnosed it myself.
+4. How to troubleshoot a broken physical connection systematically — checking module types, checking `show ip interface brief`, trying different cable-connection modes, and knowing when to rebuild clean instead of endlessly debugging a broken setup.
+5. Serial link basics — connecting two routers directly with a serial interface instead of going through a switch.
+
+**Challenges:**
+
+This was by far the most frustrating day yet. A router module (`NM-1CFE`) flatly refused a cable connection, and I spent a long time trying different cable types and module swaps before deciding to rebuild the whole topology from scratch with simpler routers instead. It was a little discouraging in the moment — this day didn't have the same "aha!" feeling Day 1 and 2 did, since the core routing *concept* was actually simple; the difficulty was almost entirely tooling friction, not understanding. Had to remind myself that fighting through broken configs and misbehaving hardware is a real, valid part of this skill set too — not just theory clicking into place.
+
+**Conclusion:**
+
+Less of a "lightbulb" day and more of a "grind it out" day — but I think those matter just as much, if not more, for actually being job-ready. I now have real reps at diagnosing why a connection isn't working instead of just knowing the commands in isolation. Planning to pause after Day 5 and run myself through a proper test covering everything from Days 1–5 before pushing further, to make sure it's all actually sticking and not just day-by-day survival. Onward to DHCP next. ⚡
